@@ -1,0 +1,11 @@
+Machine vibration dataset - manifest
+
+file                             rows          bytes  sha256
+data/machine_01.csv.gz        1112884      233205432  8e0a6ff8c514542527de2e4455b3a5691ccc7f2b16d50bb2d2ee0cf20384e827
+data/machine_02.csv.gz         841621      180733189  4b73b649ce1e75a7ec30734f25d79d1cd65305afca36f1585a629c193aa33734
+data/machine_03.csv.gz         600899      129809724  c0ceebf371aa8c3c2529a680295c2f805d43461a359c922992a9b4bf574b2cba
+data/machine_04.csv.gz         133778       28841246  71cc808da2e42f468731c1eca45da8d9e94f3129f4d7064aa07bca88f212718f
+data/machine_05.csv.gz         120346       25624205  ca25b391a700ac53b67fa40d2cc87164deeed6568a03d600c4fe1b5be04e1ee8
+data/machine_06.csv.gz          92891       20029949  a81fe0b3de7f666a07e3c55a70f5451883162c182c90ab0b3d2787d9761081bb
+
+Columns per file: 85 (time + 84 features). Timestamps UTC, shifted by whole weeks.

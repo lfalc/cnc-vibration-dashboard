@@ -1,0 +1,14 @@
+# Large source dataset files
+thesis-dataset.zip
+thesis-dataset/thesis-dataset/data/
+
+# Generated dashboard caches
+dashboard/cache/
+
+# macOS metadata
+.DS_Store
+__MACOSX/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
