@@ -14,6 +14,8 @@ python3 -m research.partition \
 python3 -m research.windowing
 python3 -m research.features
 python3 -m research.m2_protocol
+PYTHONPATH=. python3 -m research.m3_baseline --freeze
+PYTHONPATH=. python3 -m research.m3_baseline --evaluate-test
 ```
 
 The audit writes ignored derived files:
@@ -40,6 +42,11 @@ The audit writes ignored derived files:
 The M2 decision record is [`M2_EVIDENCE.md`](M2_EVIDENCE.md). It records the
 scope, assumptions, validation results, and remaining limitations without
 modifying the thesis documents.
+
+The M3 supervised reference-point decision record is [`M3_EVIDENCE.md`](M3_EVIDENCE.md).
+M3 writes ignored validation and frozen-test artifacts under
+`research_outputs/m3/`; final-test evaluation requires the explicit frozen
+configuration produced by the first command.
 
 The binary state is derived from interval membership. All source anomaly labels
 (`0`, `1`, and `2`) remain available in `label`; they are not collapsed into an
