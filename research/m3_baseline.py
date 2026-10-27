@@ -87,9 +87,11 @@ def fit_predict(train: pd.DataFrame, scored: pd.DataFrame) -> tuple[np.ndarray, 
         raise ValueError("fit and scored rows overlap")
     scaler = StandardScaler()
     x_train = scaler.fit_transform(train[list(FEATURES)])
-    x_scored = scaler.transform(scored[list(FEATURES)])
     classifier = LogisticRegression(**{k: v for k, v in MODEL.items() if k in {"C", "class_weight", "solver", "max_iter"}})
     classifier.fit(x_train, train.label.astype(int))
+    if scored.empty:
+        return np.array([], dtype=int), np.array([], dtype=float)
+    x_scored = scaler.transform(scored[list(FEATURES)])
     probabilities = classifier.predict_proba(x_scored)[:, 1]
     return (probabilities >= MODEL["threshold"]).astype(int), probabilities
 

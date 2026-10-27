@@ -16,6 +16,8 @@ python3 -m research.features
 python3 -m research.m2_protocol
 PYTHONPATH=. python3 -m research.m3_baseline --freeze
 PYTHONPATH=. python3 -m research.m3_baseline --evaluate-test
+PYTHONPATH=. python3 -m research.m4_pseudolabel --freeze
+PYTHONPATH=. python3 -m research.m4_pseudolabel --evaluate-test
 ```
 
 The audit writes ignored derived files:
@@ -47,6 +49,10 @@ The M3 supervised reference-point decision record is [`M3_EVIDENCE.md`](M3_EVIDE
 M3 writes ignored validation and frozen-test artifacts under
 `research_outputs/m3/`; final-test evaluation requires the explicit frozen
 configuration produced by the first command.
+
+The M4 non-agent pseudo-labeling decision record is [`M4_EVIDENCE.md`](M4_EVIDENCE.md).
+M4 writes ignored self-training and pseudo-label-quality artifacts under
+`research_outputs/m4/` and requires its frozen configuration before test scoring.
 
 The binary state is derived from interval membership. All source anomaly labels
 (`0`, `1`, and `2`) remain available in `label`; they are not collapsed into an
