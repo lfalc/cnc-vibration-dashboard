@@ -2,6 +2,13 @@
 thesis-dataset.zip
 thesis-dataset/thesis-dataset/data/
 
+# Large research archive; keep locally or use external dataset storage
+archive/
+archive.zip
+
+# Derived research manifests and window tables
+research_outputs/
+
 # Generated dashboard caches
 dashboard/cache/
 

@@ -1,6 +1,9 @@
 import pandas as pd
 
-from preprocess import compute_daily_stats, compute_feature_bins, compute_spectral_bins
+try:
+    from dashboard.preprocess import compute_daily_stats, compute_feature_bins, compute_spectral_bins
+except ModuleNotFoundError:
+    from preprocess import compute_daily_stats, compute_feature_bins, compute_spectral_bins
 
 
 def sample_frame():

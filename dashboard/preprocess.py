@@ -12,7 +12,10 @@ for the Streamlit dashboard. The cache files contain:
 import pandas as pd
 from pathlib import Path
 import json
-from vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, DATA_DIR
+try:
+    from dashboard.vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, DATA_DIR
+except ModuleNotFoundError:  # Direct execution from the dashboard directory.
+    from vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, DATA_DIR
 
 
 def read_machine_file(filepath: Path) -> pd.DataFrame:

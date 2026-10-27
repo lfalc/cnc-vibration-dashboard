@@ -1,4 +1,7 @@
-from vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, MACHINE_NAMES
+try:
+    from dashboard.vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, MACHINE_NAMES
+except ModuleNotFoundError:
+    from vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, MACHINE_NAMES
 
 
 def test_feature_schema_matches_dataset():
