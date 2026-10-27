@@ -5,36 +5,14 @@ Preprocessing script for vibration dashboard.
 Reads compressed CSV files once and generates compact derived cache files
 for the Streamlit dashboard. The cache files contain:
 - Daily median, 10th percentile, 90th percentile, and sample count for all features
-- Time-binned (15-minute) spectral band summaries for each machine, axis, and band
+- Time-binned (1-minute) spectral band summaries for each machine, axis, and band
+- Time-binned (1-minute) traces for all machine features
 """
 
-import gzip
 import pandas as pd
-import numpy as np
 from pathlib import Path
 import json
-from typing import Dict, List, Tuple
-import sys
-
-
-# Column groups
-AXES = ['x', 'y', 'z']
-BANDS = [f'band_{i:02d}_db' for i in range(1, 17)]
-STAT_FEATURES = ['rms', 'kurtosis', 'crest', 'skewness']
-PEAK_FEATURES = ['peak1_hz', 'peak1_amp', 'peak2_hz', 'peak2_amp', 
-                 'peak3_hz', 'peak3_amp', 'peak4_hz', 'peak4_amp']
-
-ALL_FEATURES = STAT_FEATURES + PEAK_FEATURES + BANDS
-
-
-def get_feature_columns(axis: str) -> List[str]:
-    """Get all feature column names for a given axis."""
-    cols = []
-    for feat in STAT_FEATURES + PEAK_FEATURES:
-        cols.append(f'{axis}_{feat}')
-    for band in BANDS:
-        cols.append(f'{axis}_{band}')
-    return cols
+from vibration_dashboard.config import ALL_FEATURES, AXES, BANDS, DATA_DIR
 
 
 def read_machine_file(filepath: Path) -> pd.DataFrame:
@@ -76,8 +54,8 @@ def compute_daily_stats(df: pd.DataFrame) -> pd.DataFrame:
     return daily_df
 
 
-def compute_spectral_bins(df: pd.DataFrame, bin_minutes: int = 15) -> pd.DataFrame:
-    """Compute time-binned (15-min) median spectral band values for heatmap."""
+def compute_spectral_bins(df: pd.DataFrame, bin_minutes: int = 1) -> pd.DataFrame:
+    """Compute time-binned (1-min) median spectral band values for heatmap."""
     df = df.set_index('time')
     
     # Only compute for spectral bands
@@ -101,6 +79,15 @@ def compute_spectral_bins(df: pd.DataFrame, bin_minutes: int = 15) -> pd.DataFra
     return binned_df
 
 
+def compute_feature_bins(df: pd.DataFrame, bin_minutes: int = 1) -> pd.DataFrame:
+    """Compute 1-minute median traces for every recorded feature."""
+    indexed = df.set_index('time')
+    feature_cols = [c for c in indexed.columns if c != 'time']
+    binned_df = indexed[feature_cols].resample(f'{bin_minutes}min').median()
+    binned_df.index.name = 'time_bin'
+    return binned_df.reset_index()
+
+
 def process_machine(machine_name: str, input_path: Path, cache_dir: Path):
     """Process a single machine file and write cache files."""
     print(f"\nProcessing {machine_name}...")
@@ -115,11 +102,17 @@ def process_machine(machine_name: str, input_path: Path, cache_dir: Path):
     print(f"  Saved daily stats to {daily_path} ({len(daily_stats)} days)")
     
     # Compute spectral heatmap bins
-    print("  Computing spectral heatmap bins (15-min)...")
-    spectral_bins = compute_spectral_bins(df, bin_minutes=15)
-    spectral_path = cache_dir / f'{machine_name}_spectral_15min.parquet'
+    print("  Computing spectral heatmap bins (1-min)...")
+    spectral_bins = compute_spectral_bins(df, bin_minutes=1)
+    spectral_path = cache_dir / f'{machine_name}_spectral_1min.parquet'
     spectral_bins.to_parquet(spectral_path, index=False)
     print(f"  Saved spectral bins to {spectral_path} ({len(spectral_bins)} bins)")
+
+    print("  Computing feature traces (1-min)...")
+    feature_bins = compute_feature_bins(df, bin_minutes=1)
+    feature_path = cache_dir / f'{machine_name}_features_1min.parquet'
+    feature_bins.to_parquet(feature_path, index=False)
+    print(f"  Saved feature traces to {feature_path} ({len(feature_bins)} bins)")
 
     # Save metadata
     metadata = {
@@ -132,7 +125,8 @@ def process_machine(machine_name: str, input_path: Path, cache_dir: Path):
         },
         'daily_stats_rows': len(daily_stats),
         'spectral_bins_rows': len(spectral_bins),
-        'bin_minutes': 15,
+        'feature_bins_rows': len(feature_bins),
+        'bin_minutes': 1,
         'features': ALL_FEATURES,
         'axes': AXES,
         'bands': BANDS,
@@ -148,8 +142,7 @@ def process_machine(machine_name: str, input_path: Path, cache_dir: Path):
 
 
 def main():
-    project_root = Path(__file__).resolve().parent.parent
-    data_dir = project_root / 'thesis-dataset' / 'thesis-dataset' / 'data'
+    data_dir = DATA_DIR
     cache_dir = Path(__file__).resolve().parent / 'cache'
     cache_dir.mkdir(parents=True, exist_ok=True)
     

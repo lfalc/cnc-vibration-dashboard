@@ -12,3 +12,8 @@ __MACOSX/
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Local tooling and test caches
+.pi/
+.ruff_cache/
+.pytest_cache/

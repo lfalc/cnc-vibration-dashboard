@@ -1,129 +1,47 @@
 #!/usr/bin/env python3
-"""Streamlit dashboard for daily vibration features and spectral bands."""
+"""Streamlit entry point for the day-level vibration dashboard."""
 
-import json
-from pathlib import Path
-from typing import Dict, List
-
-import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
+
+from vibration_dashboard.charts import combined_day_chart
+from vibration_dashboard.config import AXES, CACHE_DIR, FEATURE_LABELS, FEATURES, MACHINE_NAMES
+from vibration_dashboard.data import (
+    available_machines,
+    load_daily,
+    load_features,
+    load_metadata,
+    load_spectral,
+)
 
 
 st.set_page_config(page_title="Vibration Dashboard", page_icon="📊", layout="wide")
 
-CACHE_DIR = Path(__file__).parent / "cache"
-AXES = ["x", "y", "z"]
-BANDS = [f"band_{i:02d}_db" for i in range(1, 17)]
-FEATURES = [
-    "rms", "kurtosis", "crest", "skewness",
-    "peak1_hz", "peak1_amp", "peak2_hz", "peak2_amp",
-    "peak3_hz", "peak3_amp", "peak4_hz", "peak4_amp",
-] + BANDS
-FEATURE_LABELS = {
-    "rms": "RMS (g)", "kurtosis": "Kurtosis", "crest": "Crest factor",
-    "skewness": "Skewness", "peak1_hz": "Peak 1 frequency (Hz)",
-    "peak1_amp": "Peak 1 amplitude", "peak2_hz": "Peak 2 frequency (Hz)",
-    "peak2_amp": "Peak 2 amplitude", "peak3_hz": "Peak 3 frequency (Hz)",
-    "peak3_amp": "Peak 3 amplitude", "peak4_hz": "Peak 4 frequency (Hz)",
-    "peak4_amp": "Peak 4 amplitude",
-}
 
-
-@st.cache_data
-def available_machines() -> List[str]:
-    return sorted(p.stem.replace("_metadata", "") for p in CACHE_DIR.glob("*_metadata.json"))
-
-
-@st.cache_data
-def load_metadata(machine: str) -> Dict:
-    with open(CACHE_DIR / f"{machine}_metadata.json", encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-@st.cache_data
-def load_daily(machine: str) -> pd.DataFrame:
-    frame = pd.read_parquet(CACHE_DIR / f"{machine}_daily.parquet")
-    frame["date"] = pd.to_datetime(frame["date"], utc=True)
-    return frame
-
-
-@st.cache_data
-def load_spectral(machine: str) -> pd.DataFrame:
-    frame = pd.read_parquet(CACHE_DIR / f"{machine}_spectral_15min.parquet")
-    frame["time_bin"] = pd.to_datetime(frame["time_bin"], utc=True)
-    return frame
-
-
-def feature_columns(axis: str) -> List[str]:
-    return [f"{axis}_{feature}" for feature in FEATURES]
-
-
-def trend_chart(frame: pd.DataFrame, axis: str, feature: str) -> go.Figure:
-    prefix = f"{axis}_{feature}"
-    median = f"{prefix}_median"
-    p10 = f"{prefix}_p10"
-    p90 = f"{prefix}_p90"
-    if median not in frame:
-        return go.Figure()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=frame.date, y=frame[p90], line=dict(width=0), showlegend=False, hoverinfo="skip"))
-    fig.add_trace(go.Scatter(
-        x=frame.date, y=frame[p10], line=dict(width=0), fill="tonexty",
-        fillcolor="rgba(0,123,255,.15)", name="10th–90th percentile", hoverinfo="skip",
-    ))
-    fig.add_trace(go.Scatter(
-        x=frame.date, y=frame[median], mode="lines+markers",
-        line=dict(color="#007bff", width=2), marker=dict(size=4),
-        name="Daily median", hovertemplate="%{x|%Y-%m-%d}<br>Median: %{y:.4g}<extra></extra>",
-    ))
-    fig.update_layout(
-        title=f"{axis.upper()}-axis {FEATURE_LABELS.get(feature, feature)} — daily median",
-        xaxis_title="Date (shifted UTC)", yaxis_title=FEATURE_LABELS.get(feature, feature),
-        hovermode="x unified", template="plotly_dark", height=400,
-        margin=dict(l=60, r=40, t=60, b=40),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-    )
-    return fig
-
-
-def spectral_chart(frame: pd.DataFrame, axis: str) -> go.Figure:
-    band_cols = [f"{axis}_{band}" for band in BANDS]
-    available = [column for column in band_cols if column in frame]
-    if frame.empty or not available:
-        return go.Figure()
-    values = frame[available].T.to_numpy(dtype=float)
-    finite = values[np.isfinite(values)]
-    vmin, vmax = np.nanpercentile(finite, [1, 99]) if finite.size else (-20, 10)
-    labels = [f"Band {i:02d}" for i in range(1, len(available) + 1)]
-    fig = go.Figure(go.Heatmap(
-        z=values, x=frame.time_bin, y=labels, zmin=vmin, zmax=vmax,
-        colorscale="Blues", colorbar=dict(title="Relative dB", thickness=15, len=.8),
-        connectgaps=False,
-        hovertemplate="Time: %{x|%Y-%m-%d %H:%M}<br>%{y}<br>%{z:.2f} dB<extra></extra>",
-    ))
-    fig.update_layout(
-        title=f"Spectral band heatmap — {axis.upper()}-axis (15-minute median bins)",
-        xaxis_title="Time (shifted UTC)", yaxis_title="Frequency band", template="plotly_dark",
-        height=500, margin=dict(l=80, r=60, t=60, b=60), yaxis=dict(autorange="reversed"),
-    )
-    return fig
-
-
-def main():
+def apply_styles() -> None:
     st.markdown("""
     <style>
-    .stApp { background-color: #1a1a2e; }
-    .main-header { color: #e8e8e8; font-weight: 300; letter-spacing: .05em; }
-    .note-text { color: #ffc107; font-size: .85rem; font-style: italic; }
-    .disclaimer { color: #aaa; font-size: .8rem; margin-top: 1rem; padding: .6rem;
-                  background: #0f0f1a; border-radius: 4px; border-left: 3px solid #ffc107; }
+    .stApp { background-color: #ffffff; color: #374151; }
+    .main-header { color: #374151; font-weight: 600; letter-spacing: .01em; }
+    .note-text { color: #4b5563; font-size: 1rem; }
+    .disclaimer { color: #4b5563; font-size: .9rem; line-height: 1.55; margin-top: 1rem; padding: .7rem;
+                  background: #f8f9fb; border-radius: 4px; border-left: 3px solid #e87919; }
+    [data-testid="stSidebar"] { color: #374151; }
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] .stCaption { color: #4b5563 !important; }
+    [data-testid="stCaptionContainer"] p { color: #4b5563 !important; font-size: .9rem; }
+    .stSelectbox label, .stDateInput label { color: #374151 !important; font-weight: 600; }
     </style>
     """, unsafe_allow_html=True)
-    st.markdown('<h1 class="main-header">VIBRATION OBSERVATORY</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="note-text">Daily feature trends · Spectral band heatmap</p>', unsafe_allow_html=True)
+
+
+def main() -> None:
+    apply_styles()
+    st.markdown('<h1 class="main-header">Vibration review</h1>', unsafe_allow_html=True)
+    st.markdown(
+        '<p class="note-text">Read-only daily feature viewer · recorded spectral bands · no classifier output</p>',
+        unsafe_allow_html=True,
+    )
 
     with st.sidebar:
         st.header("Controls")
@@ -131,30 +49,72 @@ def main():
         if not machines:
             st.error("No cached machine data found. Run preprocessing first.")
             st.stop()
-        machine = st.selectbox("Machine", machines)
+
+        machine = st.selectbox("Machine", machines, format_func=lambda value: MACHINE_NAMES.get(value, value))
         metadata = load_metadata(machine)
         axis = st.selectbox("Axis", AXES)
         feature = st.selectbox("Feature", FEATURES, format_func=lambda value: FEATURE_LABELS.get(value, value))
+        skip_empty = st.checkbox("Skip days with empty data", value=False)
         daily = load_daily(machine)
         minimum = daily.date.min().date()
         maximum = daily.date.max().date()
-        selected = st.date_input("Date range (shifted UTC)", value=(minimum, maximum), min_value=minimum, max_value=maximum)
-        if len(selected) == 2:
-            start, end = selected
-        else:
-            start, end = minimum, maximum
+        all_days = list(pd.date_range(minimum, maximum, freq="D").date)
+        count_column = f"{axis}_{feature}_count"
+        populated_days = list(daily.loc[daily[count_column].fillna(0) > 0, "date"].dt.date) if count_column in daily else []
+        navigation_days = populated_days if skip_empty else all_days
+        if not navigation_days:
+            st.warning("No non-empty days are available for this feature.")
+            navigation_days = all_days
+
+        day_key = f"review_day_value_{machine}"
+        if day_key not in st.session_state:
+            st.session_state[day_key] = minimum
+        review_day = st.date_input(
+            "Review day (shifted UTC)",
+            value=st.session_state[day_key],
+            min_value=minimum,
+            max_value=maximum,
+        )
+        if skip_empty and review_day not in navigation_days:
+            later_days = [day for day in navigation_days if day > review_day]
+            st.session_state[day_key] = later_days[0] if later_days else navigation_days[-1]
+            st.rerun()
+
         st.divider()
+        st.caption(MACHINE_NAMES.get(machine, machine))
         st.caption(f"Rows: {metadata['row_count']:,}")
         st.caption(f"Range: {metadata['date_range']['start'][:10]} → {metadata['date_range']['end'][:10]}")
 
-    start_ts = pd.Timestamp(start, tz="UTC")
-    end_ts = pd.Timestamp(end, tz="UTC") + pd.Timedelta(days=1)
-    daily_view = daily[(daily.date >= start_ts) & (daily.date < end_ts)]
+    start_ts = pd.Timestamp(review_day, tz="UTC")
+    end_ts = start_ts + pd.Timedelta(days=1)
+    features = load_features(machine)
+    feature_view = features[(features.time_bin >= start_ts) & (features.time_bin < end_ts)]
     spectral = load_spectral(machine)
     spectral_view = spectral[(spectral.time_bin >= start_ts) & (spectral.time_bin < end_ts)]
+    value_column = f"{axis}_{feature}"
 
-    st.plotly_chart(trend_chart(daily_view, axis, feature), use_container_width=True, config={"displaylogo": False})
-    st.plotly_chart(spectral_chart(spectral_view, axis), use_container_width=True, config={"displaylogo": False})
+    if feature_view.empty or not feature_view[value_column].notna().any():
+        st.info("This feature has no recorded values on the selected day. Enable 'Skip days with empty data' to navigate only to populated days.")
+    else:
+        st.plotly_chart(
+            combined_day_chart(feature_view, spectral_view, axis, feature, start_ts, end_ts),
+            width="stretch",
+            config={"displaylogo": False},
+        )
+
+    day_index = navigation_days.index(review_day) if review_day in navigation_days else 0
+    previous, next_day, position = st.columns([1, 1, 2.4])
+    with previous:
+        if st.button("‹ Previous day", width="stretch", disabled=day_index == 0):
+            st.session_state[day_key] = navigation_days[day_index - 1]
+            st.rerun()
+    with next_day:
+        if st.button("Next day ›", width="stretch", disabled=day_index == len(navigation_days) - 1):
+            st.session_state[day_key] = navigation_days[day_index + 1]
+            st.rerun()
+    with position:
+        st.markdown(f"**{review_day}** — day {day_index + 1} of {len(navigation_days)}")
+
     st.markdown("""
     <div class="disclaimer"><strong>Notes:</strong><br>
     • Dates are shifted and should not be interpreted as real calendar dates.<br>
