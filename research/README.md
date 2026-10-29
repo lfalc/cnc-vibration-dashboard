@@ -22,6 +22,8 @@ PYTHONPATH=. python3 -m research.m5_agent --freeze
 PYTHONPATH=. python3 -m research.m5_agent --evaluate-test
 PYTHONPATH=. python3 -m research.m6_comparison --freeze
 PYTHONPATH=. python3 -m research.m6_comparison --evaluate-test
+PYTHONPATH=. python3 -m research.m7_reliability --freeze
+PYTHONPATH=. python3 -m research.m7_reliability --evaluate-test
 ```
 
 The audit writes ignored derived files:
@@ -65,6 +67,10 @@ downstream results under `research_outputs/m5/`.
 The M6 matched augmentation decision record is [`M6_EVIDENCE.md`](M6_EVIDENCE.md).
 M6 writes augmented-pool manifests, matched metrics, deltas, and frozen-test
 comparisons under `research_outputs/m6/`.
+
+The M7 reliability and attribution decision record is [`M7_EVIDENCE.md`](M7_EVIDENCE.md).
+M7 writes seed, group-dependence, coverage/noise, and ablation analyses under
+`research_outputs/m7/`.
 
 The binary state is derived from interval membership. All source anomaly labels
 (`0`, `1`, and `2`) remain available in `label`; they are not collapsed into an
