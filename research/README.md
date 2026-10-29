@@ -24,6 +24,7 @@ PYTHONPATH=. python3 -m research.m6_comparison --freeze
 PYTHONPATH=. python3 -m research.m6_comparison --evaluate-test
 PYTHONPATH=. python3 -m research.m7_reliability --freeze
 PYTHONPATH=. python3 -m research.m7_reliability --evaluate-test
+PYTHONPATH=. python3 -m research.m8_finalize
 ```
 
 The audit writes ignored derived files:
@@ -71,6 +72,10 @@ comparisons under `research_outputs/m6/`.
 The M7 reliability and attribution decision record is [`M7_EVIDENCE.md`](M7_EVIDENCE.md).
 M7 writes seed, group-dependence, coverage/noise, and ablation analyses under
 `research_outputs/m7/`.
+
+The M8 final reproducibility handoff is [`M8_EVIDENCE.md`](M8_EVIDENCE.md).
+M8 verifies milestone artifacts, records configuration and artifact hashes,
+and writes the ignored final manifest under `research_outputs/m8/`.
 
 The binary state is derived from interval membership. All source anomaly labels
 (`0`, `1`, and `2`) remain available in `label`; they are not collapsed into an
