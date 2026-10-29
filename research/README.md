@@ -20,6 +20,8 @@ PYTHONPATH=. python3 -m research.m4_pseudolabel --freeze
 PYTHONPATH=. python3 -m research.m4_pseudolabel --evaluate-test
 PYTHONPATH=. python3 -m research.m5_agent --freeze
 PYTHONPATH=. python3 -m research.m5_agent --evaluate-test
+PYTHONPATH=. python3 -m research.m6_comparison --freeze
+PYTHONPATH=. python3 -m research.m6_comparison --evaluate-test
 ```
 
 The audit writes ignored derived files:
@@ -59,6 +61,10 @@ M4 writes ignored self-training and pseudo-label-quality artifacts under
 The M5 auditable prototype-agent decision record is [`M5_EVIDENCE.md`](M5_EVIDENCE.md).
 M5 writes agent decisions, evidence margins, pseudo-label quality, and matched
 downstream results under `research_outputs/m5/`.
+
+The M6 matched augmentation decision record is [`M6_EVIDENCE.md`](M6_EVIDENCE.md).
+M6 writes augmented-pool manifests, matched metrics, deltas, and frozen-test
+comparisons under `research_outputs/m6/`.
 
 The binary state is derived from interval membership. All source anomaly labels
 (`0`, `1`, and `2`) remain available in `label`; they are not collapsed into an
