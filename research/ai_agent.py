@@ -26,6 +26,8 @@ from research.m3_baseline import FEATURES
 AI_AGENT_VERSION = "ai-evidence-agent-v1"
 DECISION_SCHEMA_VERSION = "decision-v1"
 LABELS = {0, 1}
+DECISION_MODELS = {"baseten/joey-1", "baseten/elephant-1", "perplexity/pplx-decider-flash-v1.2", "nace-ai/drex-v1.5"}
+MAX_VISIBLE_EXAMPLES_PER_CLASS = 16
 
 
 class Provider(Protocol):
@@ -90,11 +92,35 @@ class OpenRouterClient:
     output_usd_per_million: float = 0.0
     schema_version: str = DECISION_SCHEMA_VERSION
     dry_run: bool = False
+    api_mode: str = "auto"
+
+    def __post_init__(self) -> None:
+        self.cache_dir = Path(self.cache_dir)
+        if self.trace_path is not None:
+            self.trace_path = Path(self.trace_path)
 
     def _request_payload(self, system: str, user: str) -> dict:
+        if self._uses_decisions_api():
+            evidence = json.loads(user)
+            questions = {}
+            for candidate in evidence["candidates"]:
+                window_id = str(candidate["window_id"])
+                questions[window_id] = {
+                    "type": "choice",
+                    "instructions": "Classify this vibration window. Choose uncertain when the evidence is ambiguous.",
+                    "criteria": {
+                        "cutting": "The window is inside the labeled cutting interval.",
+                        "non_cutting": "The window is outside the labeled cutting interval.",
+                        "uncertain": "The features do not support a reliable binary label.",
+                    },
+                }
+            return {"model": self.model, "state": {"instructions": system, "evidence": evidence}, "questions": questions}
         return {"model": self.model, "temperature": self.temperature,
                 "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                 "response_format": {"type": "json_schema", "json_schema": {"name": "vibration_decisions", "strict": True, "schema": DECISION_JSON_SCHEMA}}}
+
+    def _uses_decisions_api(self) -> bool:
+        return self.api_mode == "decisions" or (self.api_mode == "auto" and self.model in DECISION_MODELS)
 
     def _cache_key(self, payload: dict) -> str:
         material = json.dumps({"schema_version": self.schema_version, "payload": payload}, sort_keys=True, separators=(",", ":")).encode()
@@ -131,13 +157,18 @@ class OpenRouterClient:
         key = os.environ.get("OPENROUTER_API_KEY")
         if not key:
             raise RuntimeError("OPENROUTER_API_KEY is required for live AI labeling")
-        req = request.Request(self.base_url.rstrip("/") + "/chat/completions", data=json.dumps(payload).encode(), headers={
+        endpoint = self.base_url.rstrip("/") + "/chat/completions"
+        if self._uses_decisions_api():
+            endpoint = self.base_url.rstrip("/").replace("/api/v1", "") + "/api/alpha/decisions"
+        req = request.Request(endpoint, data=json.dumps(payload).encode(), headers={
             "Authorization": f"Bearer {key}", "Content-Type": "application/json",
             "HTTP-Referer": "https://github.com/", "X-Title": "CNC vibration pseudo-labeling thesis"}, method="POST")
         for attempt in range(self.max_retries + 1):
             try:
                 with request.urlopen(req, timeout=self.timeout) as response:
                     result = json.loads(response.read())
+                if self._uses_decisions_api():
+                    return self._normalize_decisions_response(result)
                 return result["choices"][0]["message"]["content"]
             except error.HTTPError as exc:
                 transient = exc.code == 408 or exc.code == 429 or exc.code >= 500
@@ -147,10 +178,33 @@ class OpenRouterClient:
             except error.URLError as exc:
                 if attempt >= self.max_retries:
                     raise RuntimeError(f"OpenRouter connection failed: {exc.reason}") from exc
+            except OSError as exc:
+                if attempt >= self.max_retries:
+                    raise RuntimeError(f"OpenRouter network failure: {exc}") from exc
             except (KeyError, IndexError, TypeError, json.JSONDecodeError) as exc:
                 raise RuntimeError("OpenRouter response lacks valid message content") from exc
             time.sleep(min(2**attempt, 8))
         raise RuntimeError("OpenRouter retries exhausted")
+
+    def _normalize_decisions_response(self, result: dict) -> str:
+        answers = result.get("answers")
+        if isinstance(answers, list):
+            answers = {str(answer["name"]): answer for answer in answers}
+        if not isinstance(answers, dict):
+            raise RuntimeError("OpenRouter Decisions response lacks answers")
+        decisions = []
+        for window_id, answer in answers.items():
+            choice = answer.get("choice")
+            probabilities = answer.get("probabilities", [])
+            if isinstance(probabilities, list):
+                probabilities = {str(item["value"]): float(item["probability"]) for item in probabilities}
+            probabilities = {"cutting": float(probabilities.get("cutting", 0.0)),
+                             "non_cutting": float(probabilities.get("non_cutting", 0.0)),
+                             "uncertain": float(probabilities.get("uncertain", 0.0))}
+            label = {"cutting": 1, "non_cutting": 0}.get(choice)
+            decisions.append({"window_id": str(window_id), "decision": "accept" if label is not None else "abstain",
+                              "label": label, "probabilities": probabilities, "rationale": "typed Decisions API choice"})
+        return json.dumps({"decisions": decisions})
 
     def _trace(self, row: dict) -> None:
         if self.trace_path is None:
@@ -178,8 +232,11 @@ def _records(frame: pd.DataFrame, include_labels: bool) -> list[dict]:
 
 def build_prompt(fit: pd.DataFrame, candidates: pd.DataFrame) -> str:
     """Serialize only allowed evidence; candidate labels are never included."""
+    visible = fit[["window_id", *FEATURES, "label"]]
+    if len(visible) > 2 * MAX_VISIBLE_EXAMPLES_PER_CLASS:
+        visible = visible.groupby("label", sort=True, group_keys=False).head(MAX_VISIBLE_EXAMPLES_PER_CLASS)
     return json.dumps({"label_vocabulary": {"0": "non_cutting", "1": "cutting"},
-                       "visible_examples": _records(fit[["window_id", *FEATURES, "label"]], True),
+                       "visible_examples": _records(visible, True),
                        "candidates": _records(candidates[["window_id", *FEATURES]], False)}, sort_keys=True)
 
 

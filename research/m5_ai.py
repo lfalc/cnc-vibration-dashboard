@@ -35,7 +35,8 @@ def _batches(frame: pd.DataFrame, batch_size: int):
 
 def _ai_decisions(fit, candidates, provider, policy, batch_size):
     pieces = []
-    for batch in _batches(candidates, batch_size):
+    effective_batch_size = batch_size if len(fit) <= 32 else min(batch_size, 16)
+    for batch in _batches(candidates, effective_batch_size):
         pieces.append(apply_policy(label_candidates(fit, batch, provider), policy))
     return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
 
