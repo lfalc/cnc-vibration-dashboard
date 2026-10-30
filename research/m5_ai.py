@@ -50,11 +50,12 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
               "dry_run": dry_run, "scored_split": scored_split, "frozen": frozen}
     output_dir.mkdir(parents=True, exist_ok=True)
     config["configuration_sha256"] = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
-    (output_dir / "experiment_config.json").write_text(json.dumps(config, sort_keys=True, indent=2) + "\n")
+    if scored_split == "validation":
+        (output_dir / "experiment_config.json").write_text(json.dumps(config, sort_keys=True, indent=2) + "\n")
     frame = _validate_input(pd.read_csv(m3_dir / "../m2/public_features.csv"), pd.read_csv(m3_dir / "../m2/evaluator_only/reference_labels.csv"))
     train, scored = frame[frame.split == "train"].copy(), frame[frame.split == scored_split].copy()
     provider = OpenRouterClient(model=model, cache_dir=cache_dir, trace_path=trace_path, dry_run=dry_run)
-    metrics, quality, decisions, estimates = [], [], [], []
+    metrics, quality, decisions, predictions, estimates = [], [], [], [], []
     for budget in BUDGETS:
         for seed in SEEDS:
             visible = select_visible_labels(train[["window_id", "label", "split"]].rename(columns={"label": "reference_label"}), budget, seed)
@@ -81,7 +82,8 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
                 raise ValueError("mode must be direct or hybrid")
             augmented = pd.concat([fit, pseudo[fit.columns]], ignore_index=True) if len(pseudo) else fit
             predicted, probability = fit_predict(augmented, scored)
-            metrics.append(_metric_row(scored.label, predicted, model=f"ai_{mode}", budget=budget, seed=seed, split="validation", train_rows=len(augmented), train_cutting=int((augmented.label == 1).sum()), train_non_cutting=int((augmented.label == 0).sum()), feature_available=len(FEATURES)))
+            metrics.append(_metric_row(scored.label, predicted, model=f"ai_{mode}", budget=budget, seed=seed, split=scored_split, train_rows=len(augmented), train_cutting=int((augmented.label == 1).sum()), train_non_cutting=int((augmented.label == 0).sum()), feature_available=len(FEATURES)))
+            predictions.append(pd.DataFrame({"window_id": scored.window_id, "budget": budget, "seed": seed, "split": scored_split, "method": f"ai_{mode}", "predicted_label": predicted, "predicted_probability": probability}))
             actual = candidates.set_index("window_id").loc[pseudo.window_id, "label"] if len(pseudo) else pd.Series(dtype=int)
             quality.append(_quality(f"ai_{mode}", budget, seed, actual, pseudo, len(candidates)))
             decisions.append(ai.assign(budget=budget, seed=seed))
@@ -92,6 +94,7 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
     pd.DataFrame(metrics).to_csv(output_dir / f"{prefix}_metrics.csv", index=False)
     pd.DataFrame(quality).to_csv(output_dir / f"{prefix}_pseudo_label_quality.csv", index=False)
     pd.concat(decisions, ignore_index=True).to_csv(output_dir / f"{prefix}_ai_decisions.csv", index=False)
+    pd.concat(predictions, ignore_index=True).to_csv(output_dir / f"{prefix}_predictions.csv", index=False)
     return {"dry_run": False, "metrics": len(metrics), "quality_rows": len(quality), "decision_rows": sum(len(row) for row in decisions)}
 
 

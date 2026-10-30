@@ -23,6 +23,9 @@ PYTHONPATH=. python3 -m research.m5_agent --evaluate-test
 # AI-provider-backed M5 extension (validation/replay integration in progress)
 PYTHONPATH=. python3 -m pytest -q research/tests/test_ai_agent.py
 PYTHONPATH=. python3 -m research.m5_ai --dry-run --freeze --model baseten/joey-1
+PYTHONPATH=. python3 -m research.m6_ai_comparison --freeze \
+  --ai-dir research_outputs/m5_ai_joey_direct \
+  --ai-dir research_outputs/m5_ai_joey_hybrid
 PYTHONPATH=. python3 -m research.m6_comparison --freeze
 PYTHONPATH=. python3 -m research.m6_comparison --evaluate-test
 PYTHONPATH=. python3 -m research.m7_reliability --freeze
@@ -77,6 +80,10 @@ The validation runner is [`m5_ai.py`](m5_ai.py). `--dry-run` estimates request
 volume and cost without network access; a live run requires
 `OPENROUTER_API_KEY`, writes cached responses under `research_outputs/`, and
 records request metadata in JSONL traces.
+
+After both AI validation/test runs are frozen, [`m6_ai_comparison.py`](m6_ai_comparison.py)
+merges their metrics and predictions with the existing M6 methods. The merged
+directory can then be supplied to the existing M7 reliability runner.
 
 The M6 matched augmentation decision record is [`M6_EVIDENCE.md`](M6_EVIDENCE.md).
 M6 writes augmented-pool manifests, matched metrics, deltas, and frozen-test

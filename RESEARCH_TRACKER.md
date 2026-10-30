@@ -185,6 +185,14 @@ Use short entries of the following form. Do not replace older entries with a pol
 - Risks or deviations: Prompt/provider metadata, response replay, cost accounting, and M6/M7 integration remain required before final-test evaluation.
 - Next action: Implement the frozen validation runner and matched M6 method with a selected provider/model, without exposing hidden labels.
 
+### 2026-10-30 — Add AI benchmark merge and offline validation
+- Milestone: M5-AI / M6 integration
+- Action / decision: Added `m6_ai_comparison.py` to merge frozen direct and hybrid AI outputs with the existing M6 benchmark without overwriting the deterministic results.
+- Evidence and related IDs: `research/m5_ai.py`, `research/m6_ai_comparison.py`, `research/tests/test_m6_ai_comparison.py`
+- Outcome (including failures or inconclusive findings): Full offline suite passed with 30 tests; direct and hybrid dry-runs each estimate 3,225 validation batches. No live labels were generated because `OPENROUTER_API_KEY` is not present.
+- Risks or deviations: Live provider execution, planning-model policy generation, and final M7/M8 AI artifacts remain incomplete; no metric is reported for the AI method.
+- Next action: Supply a rotatable OpenRouter key through the environment, run validation direct/hybrid, freeze configurations, then evaluate test and run M7.
+
 ```text
 ### YYYY-MM-DD — Brief activity title
 - Milestone:

@@ -46,14 +46,22 @@ probability/margin/transition acceptance gate.
 traces. `AbstentionPolicy` and policy export/import keep acceptance decisions
 in deterministic application code.
 
-## Required next integration
+## M6/M7 integration
 
-Before any final-test claim, add an M5-AI runner that records the exact model,
-provider endpoint, system prompt hash, user-prompt hashes, raw responses,
-request failures, token/cost metadata, accepted labels, abstentions, and
-configuration hash. Run it on validation only, freeze the configuration and
-response policy, then add `ai_agent` as a fourth M6 method using the existing
-matched budgets/seeds and evaluator. M7 must include a no-rationale/no-tool
-ablation and report provider cost and retry behavior.
+`research/m6_ai_comparison.py` merges frozen direct and hybrid AI outputs with
+the existing M6 metrics, predictions, quality tables, aggregates, and deltas.
+The resulting `research_outputs/m6_ai/` directory is compatible with the M7
+runner for group metrics and reliability analysis. It does not overwrite the
+original M6 artifacts.
+
+## Remaining live experiment steps
+
+Before any final-test claim, run the M5-AI runner with a deliberately supplied
+key, inspect the exact model/provider metadata, prompt/response traces, costs,
+accepted labels, abstentions, and configuration hash. Run validation for direct
+and hybrid modes, freeze both configurations, evaluate the locked test split,
+merge with M6, and run M7. A planning-model policy generator and a
+no-rationale/no-tool ablation remain separate planned comparisons; they must
+not be represented as completed results until implemented and executed.
 
 No live provider call or research result is claimed by this branch yet.
