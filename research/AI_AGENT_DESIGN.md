@@ -22,15 +22,15 @@ counted as an agent advantage.
 
 ## Implemented contract
 
-`research/ai_agent.py` defines a provider interface and an OpenAI-compatible
-HTTP provider. The provider receives visible examples with labels and candidate
+`research/ai_agent.py` defines a provider interface and an OpenRouter HTTP
+provider. The provider receives visible examples with labels and candidate
 feature rows without labels. It must return one JSON decision per candidate:
 `accept` with label `0` or `1`, or `abstain` with a null label. The adapter
 rejects unknown/duplicate/missing IDs, invalid labels, overlap between fit and
 candidate rows, and malformed responses.
 
 The returned rationale is trace evidence, not ground truth or calibrated
-confidence. Live calls require `OPENAI_API_KEY`; the provider interface also
+confidence. Live calls require `OPENROUTER_API_KEY`; the provider interface also
 supports deterministic replay providers for tests and frozen experiments.
 
 ## Implemented vertical slice
