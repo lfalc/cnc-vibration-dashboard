@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -41,6 +42,11 @@ def _ai_decisions(fit, candidates, provider, policy, batch_size):
     return pd.concat(pieces, ignore_index=True) if pieces else pd.DataFrame()
 
 
+def _checkpoint_path(output_dir: Path, budget: float, seed: int) -> Path:
+    name = f"budget_{budget:g}_seed_{seed}.csv"
+    return output_dir / "checkpoints" / re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+
+
 def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Path,
                    trace_path: Path, batch_size: int, mode: str, dry_run: bool,
                    policy: AbstentionPolicy, scored_split: str = "validation",
@@ -67,8 +73,13 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
                     estimate = provider.estimate("", build_prompt(fit, batch))
                     estimates.append({"budget": budget, "seed": seed, "candidate_rows": len(batch), **estimate.__dict__})
                 continue
-            if mode == "direct":
+            checkpoint = _checkpoint_path(output_dir, budget, seed)
+            if checkpoint.exists():
+                ai = pd.read_csv(checkpoint)
+            elif mode == "direct":
                 ai = _ai_decisions(fit, candidates, provider, policy, batch_size)
+                checkpoint.parent.mkdir(parents=True, exist_ok=True)
+                ai.to_csv(checkpoint, index=False)
                 pseudo = candidates.drop(columns=["label"]).merge(ai[ai.accepted_by_policy][["window_id", "predicted_label"]], on="window_id", validate="one_to_one")
                 pseudo = pseudo.rename(columns={"predicted_label": "label"})
             elif mode == "hybrid":
@@ -76,11 +87,23 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
                 accepted = prototype[prototype.accepted]
                 uncertain = candidates[~candidates.window_id.isin(set(accepted.window_id))]
                 ai = _ai_decisions(fit, uncertain, provider, policy, batch_size)
+                checkpoint.parent.mkdir(parents=True, exist_ok=True)
+                ai.to_csv(checkpoint, index=False)
                 ai_pseudo = uncertain.drop(columns=["label"]).merge(ai[ai.accepted_by_policy][["window_id", "predicted_label"]], on="window_id", validate="one_to_one")
                 pseudo = pd.concat([accepted[["window_id", "predicted_label"]], ai_pseudo[["window_id", "predicted_label"]]], ignore_index=True)
                 pseudo = candidates.drop(columns=["label"]).merge(pseudo, on="window_id", validate="one_to_one").rename(columns={"predicted_label": "label"})
             else:
                 raise ValueError("mode must be direct or hybrid")
+            if checkpoint.exists() and mode == "direct":
+                pseudo = candidates.drop(columns=["label"]).merge(ai[ai.accepted_by_policy][["window_id", "predicted_label"]], on="window_id", validate="one_to_one")
+                pseudo = pseudo.rename(columns={"predicted_label": "label"})
+            elif checkpoint.exists() and mode == "hybrid":
+                prototype = agent_label(fit, candidates)
+                accepted = prototype[prototype.accepted]
+                uncertain = candidates[~candidates.window_id.isin(set(accepted.window_id))]
+                ai_pseudo = uncertain.drop(columns=["label"]).merge(ai[ai.accepted_by_policy][["window_id", "predicted_label"]], on="window_id", validate="one_to_one")
+                pseudo = pd.concat([accepted[["window_id", "predicted_label"]], ai_pseudo[["window_id", "predicted_label"]]], ignore_index=True)
+                pseudo = candidates.drop(columns=["label"]).merge(pseudo, on="window_id", validate="one_to_one").rename(columns={"predicted_label": "label"})
             augmented = pd.concat([fit, pseudo[fit.columns]], ignore_index=True) if len(pseudo) else fit
             predicted, probability = fit_predict(augmented, scored)
             metrics.append(_metric_row(scored.label, predicted, model=f"ai_{mode}", budget=budget, seed=seed, split=scored_split, train_rows=len(augmented), train_cutting=int((augmented.label == 1).sum()), train_non_cutting=int((augmented.label == 0).sum()), feature_available=len(FEATURES)))
