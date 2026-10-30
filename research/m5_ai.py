@@ -22,12 +22,17 @@ from research.m5_agent import agent_label
 
 def _quality(method, budget, seed, actual, pseudo, candidates):
     if not len(pseudo):
-        return {"method": method, "budget": budget, "seed": seed, "candidate_rows": candidates, "accepted_rows": 0, "coverage": 0.0, "pseudo_accuracy": 0.0}
+        return {"method": method, "budget": budget, "seed": seed, "candidate_rows": candidates, "accepted_rows": 0, "coverage": 0.0, "pseudo_accuracy": 0.0, "pseudo_macro_f1": 0.0, "pseudo_cutting_precision": 0.0, "pseudo_cutting_recall": 0.0, "pseudo_non_cutting_precision": 0.0, "pseudo_non_cutting_recall": 0.0}
     predicted = pseudo["predicted_label"] if "predicted_label" in pseudo else pseudo["label"]
     y, p = actual.to_numpy(dtype=int), predicted.to_numpy(dtype=int)
+    tp = int(((y == 1) & (p == 1)).sum()); tn = int(((y == 0) & (p == 0)).sum()); fp = int(((y == 0) & (p == 1)).sum()); fn = int(((y == 1) & (p == 0)).sum())
+    cp = tp / (tp + fp) if tp + fp else 0.0; cr = tp / (tp + fn) if tp + fn else 0.0; np_ = tn / (tn + fn) if tn + fn else 0.0; nr = tn / (tn + fp) if tn + fp else 0.0
+    f1c = 2 * cp * cr / (cp + cr) if cp + cr else 0.0; f1n = 2 * np_ * nr / (np_ + nr) if np_ + nr else 0.0
     return {"method": method, "budget": budget, "seed": seed, "candidate_rows": candidates,
             "accepted_rows": len(pseudo), "coverage": len(pseudo) / candidates if candidates else 0.0,
-            "pseudo_accuracy": float((y == p).mean())}
+            "pseudo_accuracy": float((y == p).mean()), "pseudo_macro_f1": (f1c + f1n) / 2,
+            "pseudo_cutting_precision": cp, "pseudo_cutting_recall": cr,
+            "pseudo_non_cutting_precision": np_, "pseudo_non_cutting_recall": nr}
 
 
 def _batches(frame: pd.DataFrame, batch_size: int):
