@@ -23,7 +23,8 @@ from research.m5_agent import agent_label
 def _quality(method, budget, seed, actual, pseudo, candidates):
     if not len(pseudo):
         return {"method": method, "budget": budget, "seed": seed, "candidate_rows": candidates, "accepted_rows": 0, "coverage": 0.0, "pseudo_accuracy": 0.0}
-    y, p = actual.to_numpy(dtype=int), pseudo.predicted_label.to_numpy(dtype=int)
+    predicted = pseudo["predicted_label"] if "predicted_label" in pseudo else pseudo["label"]
+    y, p = actual.to_numpy(dtype=int), predicted.to_numpy(dtype=int)
     return {"method": method, "budget": budget, "seed": seed, "candidate_rows": candidates,
             "accepted_rows": len(pseudo), "coverage": len(pseudo) / candidates if candidates else 0.0,
             "pseudo_accuracy": float((y == p).mean())}
