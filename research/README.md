@@ -81,6 +81,11 @@ volume and cost without network access; a live run requires
 `OPENROUTER_API_KEY`, writes cached responses under `research_outputs/`, and
 records request metadata in JSONL traces.
 
+The completed Joey-1 direct/hybrid evidence record is
+[`AI_EVALUATION_RESULTS.md`](AI_EVALUATION_RESULTS.md). It reports the frozen
+validation/test comparisons and trace-based cost estimates without treating
+the AI scores as calibrated probabilities.
+
 After both AI validation/test runs are frozen, [`m6_ai_comparison.py`](m6_ai_comparison.py)
 merges their metrics and predictions with the existing M6 methods. The merged
 directory can then be supplied to the existing M7 reliability runner.

@@ -193,6 +193,14 @@ Use short entries of the following form. Do not replace older entries with a pol
 - Risks or deviations: Live provider execution, planning-model policy generation, and final M7/M8 AI artifacts remain incomplete; no metric is reported for the AI method.
 - Next action: Supply a rotatable OpenRouter key through the environment, run validation direct/hybrid, freeze configurations, then evaluate test and run M7.
 
+### 2026-10-30 — Complete Joey-1 direct and hybrid benchmark
+- Milestone: M5-AI / M6-AI / M7-AI
+- Action / decision: Ran frozen Joey-1 direct and prototype-hybrid validation, merged both with M6, evaluated the locked test partition, and ran M7 group/reliability analysis.
+- Evidence and related IDs: `research/AI_EVALUATION_RESULTS.md`, `research_outputs/m6_ai/`, `research_outputs/m7_ai/`
+- Outcome (including failures or inconclusive findings): Direct acceptance coverage was 0%; hybrid coverage was 0.364 with pseudo-label accuracy 0.751. Hybrid frozen test macro-F1 means were 0.619, 0.688, 0.741, 0.690, 0.635, 0.613, and 0.594 across the seven budgets.
+- Risks or deviations: Results cover Joey-1 direct/hybrid only. Elephant-1 and planning-model comparisons remain unrun; cost figures are trace estimates pending provider billing reconciliation.
+- Next action: Review whether the threshold policy is scientifically defensible, then optionally run the explicitly scoped Elephant-1 comparison.
+
 ```text
 ### YYYY-MM-DD — Brief activity title
 - Milestone:
