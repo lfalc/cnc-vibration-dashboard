@@ -20,6 +20,9 @@ PYTHONPATH=. python3 -m research.m4_pseudolabel --freeze
 PYTHONPATH=. python3 -m research.m4_pseudolabel --evaluate-test
 PYTHONPATH=. python3 -m research.m5_agent --freeze
 PYTHONPATH=. python3 -m research.m5_agent --evaluate-test
+# AI-provider-backed M5 extension (validation/replay integration in progress)
+PYTHONPATH=. python3 -m pytest -q research/tests/test_ai_agent.py
+PYTHONPATH=. python3 -m research.m5_ai --dry-run --freeze --model baseten/joey-1
 PYTHONPATH=. python3 -m research.m6_comparison --freeze
 PYTHONPATH=. python3 -m research.m6_comparison --evaluate-test
 PYTHONPATH=. python3 -m research.m7_reliability --freeze
@@ -64,6 +67,16 @@ M4 writes ignored self-training and pseudo-label-quality artifacts under
 The M5 auditable prototype-agent decision record is [`M5_EVIDENCE.md`](M5_EVIDENCE.md).
 M5 writes agent decisions, evidence margins, pseudo-label quality, and matched
 downstream results under `research_outputs/m5/`.
+
+The AI-provider-backed extension is specified in
+[`AI_AGENT_DESIGN.md`](AI_AGENT_DESIGN.md). It is kept separate from the frozen
+M5 result until its provider metadata, prompts, responses, cost, and replayable
+validation run are integrated into M6/M7.
+
+The validation runner is [`m5_ai.py`](m5_ai.py). `--dry-run` estimates request
+volume and cost without network access; a live run requires
+`OPENROUTER_API_KEY`, writes cached responses under `research_outputs/`, and
+records request metadata in JSONL traces.
 
 The M6 matched augmentation decision record is [`M6_EVIDENCE.md`](M6_EVIDENCE.md).
 M6 writes augmented-pool manifests, matched metrics, deltas, and frozen-test

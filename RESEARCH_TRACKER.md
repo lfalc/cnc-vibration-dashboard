@@ -177,6 +177,14 @@ Use short entries of the following form. Do not replace older entries with a pol
 
 ### Template for future entries
 
+### 2026-10-30 — Start AI-provider-backed agent branch
+- Milestone: M5 extension / M6 integration design
+- Action / decision: Created branch `ai-agent`. Preserve M4 self-training and the existing M5 prototype agent as controls; add an AI-provider-backed labeling method as a separate comparator.
+- Evidence and related IDs: `research/ai_agent.py`, `research/AI_AGENT_DESIGN.md`, `research/tests/test_ai_agent.py`
+- Outcome (including failures or inconclusive findings): Provider interface, strict JSON decision schema, candidate-label boundary, and replay-test path implemented. No live provider run or research result yet.
+- Risks or deviations: Prompt/provider metadata, response replay, cost accounting, and M6/M7 integration remain required before final-test evaluation.
+- Next action: Implement the frozen validation runner and matched M6 method with a selected provider/model, without exposing hidden labels.
+
 ```text
 ### YYYY-MM-DD — Brief activity title
 - Milestone:
