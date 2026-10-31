@@ -201,6 +201,14 @@ Use short entries of the following form. Do not replace older entries with a pol
 - Risks or deviations: Results cover Joey-1 direct/hybrid only. Elephant-1 and planning-model comparisons remain unrun; cost figures are trace estimates pending provider billing reconciliation.
 - Next action: Review whether the threshold policy is scientifically defensible, then optionally run the explicitly scoped Elephant-1 comparison.
 
+### 2026-10-31 — Complete Elephant-1 direct comparison
+- Milestone: M5-AI / M6-AI / M7-AI extension
+- Action / decision: Ran Elephant-1 direct validation and locked test evaluation, then merged it with Joey direct/hybrid outputs and reran M7.
+- Evidence and related IDs: `research/AI_EVALUATION_RESULTS.md`, `research_outputs/m6_ai/`, `research_outputs/m7_ai/`
+- Outcome (including failures or inconclusive findings): Elephant direct test macro-F1 means were 0.625, 0.631, 0.702, 0.557, 0.548, 0.557, and 0.594 across the seven budgets; mean accepted coverage was 0.021 with pseudo-label accuracy 0.451.
+- Risks or deviations: Elephant cost was corrected to its configured $0.035/M input rate for reporting; planning-model policy generation remains unrun.
+- Next action: Decide whether to merge the evaluation branch into `master` and whether a planning-model extension is justified.
+
 ```text
 ### YYYY-MM-DD — Brief activity title
 - Milestone:

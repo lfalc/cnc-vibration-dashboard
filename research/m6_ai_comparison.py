@@ -54,9 +54,10 @@ def freeze_validation(m6_dir: Path, ai_dirs: list[Path], output_dir: Path) -> di
     for index, path in enumerate(ai_dirs):
         _frozen(path, f'AI method {index}')
     output_dir.mkdir(parents=True, exist_ok=True)
+    ai_configs = [json.loads((path / 'experiment_config.json').read_text()) for path in ai_dirs]
     config = {'protocol': 'M6-AI', 'base_m6_configuration_sha256': m6['configuration_sha256'],
-              'ai_configurations': [json.loads((path / 'experiment_config.json').read_text())['configuration_sha256'] for path in ai_dirs],
-              'methods': ['limited_label', 'self_training', 'prototype_agent', 'full_verified'] + [f'ai_{json.loads((path / "experiment_config.json").read_text())["mode"]}' for path in ai_dirs],
+              'ai_configurations': [item['configuration_sha256'] for item in ai_configs],
+              'methods': ['limited_label', 'self_training', 'prototype_agent', 'full_verified'] + [item.get('method', f'ai_{item["mode"]}') for item in ai_configs],
               'frozen': True}
     config['configuration_sha256'] = hashlib.sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()
     (output_dir / 'experiment_config.json').write_text(json.dumps(config, sort_keys=True, indent=2) + '\n')

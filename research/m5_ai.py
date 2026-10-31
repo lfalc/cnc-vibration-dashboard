@@ -19,6 +19,15 @@ from research.ai_agent import AbstentionPolicy, OpenRouterClient, apply_policy, 
 from research.m3_baseline import BUDGETS, FEATURES, SEEDS, _metric_row, _validate_input, fit_predict, select_visible_labels
 from research.m5_agent import agent_label
 
+MODEL_INPUT_PRICES = {"baseten/joey-1": 0.01, "baseten/elephant-1": 0.035}
+
+
+def _method_name(model: str, mode: str) -> str:
+    if model == "baseten/joey-1":
+        return f"ai_{mode}"
+    alias = model.rsplit("/", 1)[-1].replace("-1", "")
+    return f"ai_{alias}_{mode}"
+
 
 def _quality(method, budget, seed, actual, pseudo, candidates):
     if not len(pseudo):
@@ -58,7 +67,7 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
                    policy: AbstentionPolicy, scored_split: str = "validation",
                    frozen: bool = True) -> dict:
     config = {"protocol": "M5-AI", "agent_version": "ai-evidence-agent-v1", "model": model,
-              "mode": mode, "batch_size": batch_size, "policy": policy.__dict__,
+              "mode": mode, "method": _method_name(model, mode), "input_usd_per_million": MODEL_INPUT_PRICES.get(model, 0.01), "batch_size": batch_size, "policy": policy.__dict__,
               "budgets": list(BUDGETS), "seeds": list(SEEDS), "features": list(FEATURES),
               "dry_run": dry_run, "scored_split": scored_split, "frozen": frozen}
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -67,7 +76,8 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
         (output_dir / "experiment_config.json").write_text(json.dumps(config, sort_keys=True, indent=2) + "\n")
     frame = _validate_input(pd.read_csv(m3_dir / "../m2/public_features.csv"), pd.read_csv(m3_dir / "../m2/evaluator_only/reference_labels.csv"))
     train, scored = frame[frame.split == "train"].copy(), frame[frame.split == scored_split].copy()
-    provider = OpenRouterClient(model=model, cache_dir=cache_dir, trace_path=trace_path, dry_run=dry_run)
+    provider = OpenRouterClient(model=model, cache_dir=cache_dir, trace_path=trace_path, dry_run=dry_run, input_usd_per_million=MODEL_INPUT_PRICES.get(model, 0.01))
+    method_name = _method_name(model, mode)
     metrics, quality, decisions, predictions, estimates = [], [], [], [], []
     for budget in BUDGETS:
         for seed in SEEDS:
@@ -113,10 +123,10 @@ def run_validation(m3_dir: Path, output_dir: Path, *, model: str, cache_dir: Pat
                     pseudo = candidates.drop(columns=["label"]).merge(pseudo, on="window_id", validate="one_to_one").rename(columns={"predicted_label": "label"})
             augmented = pd.concat([fit, pseudo[fit.columns]], ignore_index=True) if len(pseudo) else fit
             predicted, probability = fit_predict(augmented, scored)
-            metrics.append(_metric_row(scored.label, predicted, model=f"ai_{mode}", budget=budget, seed=seed, split=scored_split, train_rows=len(augmented), train_cutting=int((augmented.label == 1).sum()), train_non_cutting=int((augmented.label == 0).sum()), feature_available=len(FEATURES)))
-            predictions.append(pd.DataFrame({"window_id": scored.window_id, "budget": budget, "seed": seed, "split": scored_split, "method": f"ai_{mode}", "predicted_label": predicted, "predicted_probability": probability}))
+            metrics.append(_metric_row(scored.label, predicted, model=method_name, budget=budget, seed=seed, split=scored_split, train_rows=len(augmented), train_cutting=int((augmented.label == 1).sum()), train_non_cutting=int((augmented.label == 0).sum()), feature_available=len(FEATURES)))
+            predictions.append(pd.DataFrame({"window_id": scored.window_id, "budget": budget, "seed": seed, "split": scored_split, "method": method_name, "predicted_label": predicted, "predicted_probability": probability}))
             actual = candidates.set_index("window_id").loc[pseudo.window_id, "label"] if len(pseudo) else pd.Series(dtype=int)
-            quality.append(_quality(f"ai_{mode}", budget, seed, actual, pseudo, len(candidates)))
+            quality.append(_quality(method_name, budget, seed, actual, pseudo, len(candidates)))
             decisions.append(ai.assign(budget=budget, seed=seed))
     if dry_run:
         pd.DataFrame(estimates).to_csv(output_dir / "dry_run_cost_estimates.csv", index=False)

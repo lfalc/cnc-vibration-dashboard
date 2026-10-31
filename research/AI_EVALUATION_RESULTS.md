@@ -1,6 +1,6 @@
 # AI-agent evaluation results
 
-**Status:** Complete for the frozen Joey-1 direct and prototype-hybrid runs.
+**Status:** Complete for the frozen Joey-1 and Elephant-1 direct, and Joey-1 prototype-hybrid runs.
 
 ## Protocol
 
@@ -18,6 +18,7 @@ on the final test partition.
 | --- | ---: | ---: | ---: |
 | Joey direct | 0.000 | 0.000 | 0.000 |
 | Joey prototype-hybrid | 0.364 | 0.751 | 0.454 |
+| Elephant direct | 0.021 | 0.451 | 0.234 |
 
 The direct model selected a binary class for 47.3% of decision rows, but none
 passed the frozen local gate. Its downstream model therefore reproduced the
@@ -36,6 +37,10 @@ accepted AI labels for the remaining uncertain pool.
 | 25% | 0.761 | 0.755 | 0.556 | 0.613 |
 | 100% | 0.779 | 0.779 | 0.594 | 0.594 |
 
+Elephant-1 direct validation/test macro-F1 means were `0.723, 0.715, 0.768,
+0.737, 0.758, 0.763, 0.779` and `0.625, 0.631, 0.702, 0.557, 0.548,
+0.557, 0.594`, respectively.
+
 These are frozen descriptive comparisons, not evidence of universal agent
 superiority. The hybrid method matches the prototype-agent downstream values
 in this run because the AI gate accepted no additional labels beyond the
@@ -47,6 +52,7 @@ prototype path at the evaluated budgets.
 | --- | ---: | ---: | ---: | ---: |
 | Direct | 5,865 | $0.305 | 0.560 s | 0.730 s |
 | Hybrid | 3,371 | $0.175 | 0.516 s | 0.600 s |
+| Elephant direct | 5,865 | $1.066 | 0.731 s | 0.826 s |
 
 Costs are estimates from trace token counts and configured Joey-1 pricing;
 provider billing should be reconciled against the account records before
@@ -60,4 +66,5 @@ publication. Local cache replays are excluded from provider-request counts.
   `research_outputs/m5_ai_joey_hybrid/`, and the corresponding ignored cache and
   trace paths.
 - Elephant-1 comparison and planning-model policy generation were not run.
+- Planning-model policy generation was not run.
 - No threshold retuning, external label source, or hidden test label was used.
